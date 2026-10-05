@@ -1,0 +1,71 @@
+[
+  {
+    "model": "theatre.actor",
+    "pk": 1,
+    "fields": {"first_name": "Mihai", "last_name": "Eminescu"}
+  },
+  {
+    "model": "theatre.actor",
+    "pk": 2,
+    "fields": {"first_name": "Maria", "last_name": "Biesu"}
+  },
+  {
+    "model": "theatre.genre",
+    "pk": 1,
+    "fields": {"name": "Drama"}
+  },
+  {
+    "model": "theatre.genre",
+    "pk": 2,
+    "fields": {"name": "Comedy"}
+  },
+  {
+    "model": "theatre.theatrehall",
+    "pk": 1,
+    "fields": {"name": "Main Stage", "rows": 12, "seats_in_row": 16}
+  },
+  {
+    "model": "theatre.theatrehall",
+    "pk": 2,
+    "fields": {"name": "Studio Stage", "rows": 6, "seats_in_row": 10}
+  },
+  {
+    "model": "theatre.play",
+    "pk": 1,
+    "fields": {
+      "title": "The Cherry Orchard",
+      "description": "A family returns to its estate as the old way of life comes to an end.",
+      "actors": [1, 2],
+      "genres": [1]
+    }
+  },
+  {
+    "model": "theatre.play",
+    "pk": 2,
+    "fields": {
+      "title": "The Imaginary Invalid",
+      "description": "A sharp comedy about a hypochondriac and the family around him.",
+      "actors": [2],
+      "genres": [2]
+    }
+  },
+  {
+    "model": "theatre.performance",
+    "pk": 1,
+    "fields": {
+      "play": 1,
+      "theatre_hall": 1,
+      "show_time": "2027-01-15T18:30:00Z"
+    }
+  },
+  {
+    "model": "theatre.performance",
+    "pk": 2,
+    "fields": {
+      "play": 2,
+      "theatre_hall": 2,
+      "show_time": "2027-01-16T17:00:00Z"
+    }
+  }
+]
+
