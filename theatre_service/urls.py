@@ -46,4 +46,3 @@ urlpatterns = [
         name="redoc",
     ),
 ]
-

@@ -24,4 +24,3 @@ class TicketAdmin(admin.ModelAdmin):
 
 
 admin.site.register((Actor, Genre, TheatreHall, Reservation))
-

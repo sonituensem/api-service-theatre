@@ -223,4 +223,3 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data: dict):
         return get_user_model().objects.create_user(**validated_data)
-
