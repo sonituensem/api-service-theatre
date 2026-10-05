@@ -63,7 +63,9 @@ class PerformanceSerializer(serializers.ModelSerializer):
 
     def get_tickets_available(self, performance: Performance) -> int:
         total_seats = performance.theatre_hall.rows * performance.theatre_hall.seats_in_row
-        sold_seats = performance.tickets.filter(reservation__isnull=False).count()
+        sold_seats = sum(
+            ticket.reservation_id is not None for ticket in performance.tickets.all()
+        )
         return total_seats - sold_seats
 
 
@@ -85,6 +87,16 @@ class TicketSerializer(serializers.ModelSerializer):
             "row",
             "seat",
         )
+
+
+class SeatCoordinateSerializer(serializers.Serializer):
+    row = serializers.IntegerField()
+    seat = serializers.IntegerField()
+
+
+class AvailableSeatsSerializer(serializers.Serializer):
+    performance = serializers.IntegerField()
+    available_seats = SeatCoordinateSerializer(many=True)
 
 
 class ReservationSerializer(serializers.ModelSerializer):
