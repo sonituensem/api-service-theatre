@@ -1,13 +1,18 @@
 """Browsable API viewsets for theatre catalogue resources."""
 
+from django.utils.dateparse import parse_date
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import generics, status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from theatre.models import Actor, Genre, Performance, Play, Reservation, TheatreHall
 from theatre.serializers import (
     ActorSerializer,
+    AvailableSeatsSerializer,
     GenreSerializer,
     PerformanceSerializer,
     PlaySerializer,
@@ -16,6 +21,19 @@ from theatre.serializers import (
     TheatreHallSerializer,
     UserRegistrationSerializer,
 )
+
+
+def _positive_integer_query_param(request, parameter: str) -> int | None:
+    value = request.query_params.get(parameter)
+    if value is None:
+        return None
+    try:
+        parsed_value = int(value)
+    except ValueError as exc:
+        raise ValidationError({parameter: "A valid integer is required."}) from exc
+    if parsed_value < 1:
+        raise ValidationError({parameter: "Ensure this value is greater than 0."})
+    return parsed_value
 
 
 class ActorViewSet(viewsets.ModelViewSet):
@@ -38,10 +56,19 @@ class PlayViewSet(viewsets.ModelViewSet):
     search_fields = ("title", "description")
     ordering_fields = ("title",)
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("genre", int, description="Filter by genre ID."),
+            OpenApiParameter("actor", int, description="Filter by actor ID."),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
     def get_queryset(self):
         queryset = super().get_queryset()
-        genre_id = self.request.query_params.get("genre")
-        actor_id = self.request.query_params.get("actor")
+        genre_id = _positive_integer_query_param(self.request, "genre")
+        actor_id = _positive_integer_query_param(self.request, "actor")
         if genre_id:
             queryset = queryset.filter(genres__id=genre_id)
         if actor_id:
@@ -64,19 +91,38 @@ class PerformanceViewSet(viewsets.ModelViewSet):
     search_fields = ("play__title", "theatre_hall__name")
     ordering_fields = ("show_time", "play__title")
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter("play", int, description="Filter by play ID."),
+            OpenApiParameter("theatre_hall", int, description="Filter by hall ID."),
+            OpenApiParameter(
+                "show_time",
+                OpenApiTypes.DATE,
+                description="Filter by show date in YYYY-MM-DD format.",
+            ),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
     def get_queryset(self):
         queryset = super().get_queryset()
-        for query_param, field in (
-            ("play", "play_id"),
-            ("theatre_hall", "theatre_hall_id"),
-            ("show_time", "show_time__date"),
-        ):
-            value = self.request.query_params.get(query_param)
-            if value:
+        for query_param, field in (("play", "play_id"), ("theatre_hall", "theatre_hall_id")):
+            value = _positive_integer_query_param(self.request, query_param)
+            if value is not None:
                 queryset = queryset.filter(**{field: value})
+        show_time = self.request.query_params.get("show_time")
+        if show_time is not None:
+            show_date = parse_date(show_time)
+            if show_date is None:
+                raise ValidationError(
+                    {"show_time": "Use an ISO date in YYYY-MM-DD format."}
+                )
+            queryset = queryset.filter(show_time__date=show_date)
         return queryset
 
     @action(detail=True, methods=("get",), url_path="available-seats")
+    @extend_schema(responses=AvailableSeatsSerializer)
     def available_seats(self, request, pk=None):
         performance = self.get_object()
         hall = performance.theatre_hall
@@ -98,6 +144,7 @@ class PerformanceViewSet(viewsets.ModelViewSet):
 
 
 class ReservationViewSet(viewsets.ModelViewSet):
+    queryset = Reservation.objects.all()
     permission_classes = (IsAuthenticated,)
     http_method_names = ("get", "post", "delete", "head", "options")
 
