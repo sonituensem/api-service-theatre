@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: theatre
+      POSTGRES_USER: theatre
+      POSTGRES_PASSWORD: theatre
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U theatre -d theatre"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    command: sh -c "python manage.py migrate && gunicorn theatre_service.wsgi:application --bind 0.0.0.0:8000"
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-local-compose-key-change-before-deploying}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-True}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-127.0.0.1,localhost}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://theatre:theatre@db:5432/theatre}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
