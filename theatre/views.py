@@ -10,6 +10,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from theatre.models import Actor, Genre, Performance, Play, Reservation, TheatreHall
+from theatre.permissions import IsAdminOrReadOnly
 from theatre.serializers import (
     ActorSerializer,
     AvailableSeatsSerializer,
@@ -39,6 +40,7 @@ def _positive_integer_query_param(request, parameter: str) -> int | None:
 class ActorViewSet(viewsets.ModelViewSet):
     queryset = Actor.objects.all()
     serializer_class = ActorSerializer
+    permission_classes = (IsAdminOrReadOnly,)
     search_fields = ("first_name", "last_name")
     ordering_fields = ("first_name", "last_name")
 
@@ -46,6 +48,7 @@ class ActorViewSet(viewsets.ModelViewSet):
 class GenreViewSet(viewsets.ModelViewSet):
     queryset = Genre.objects.all()
     serializer_class = GenreSerializer
+    permission_classes = (IsAdminOrReadOnly,)
     search_fields = ("name",)
     ordering_fields = ("name",)
 
@@ -53,6 +56,7 @@ class GenreViewSet(viewsets.ModelViewSet):
 class PlayViewSet(viewsets.ModelViewSet):
     queryset = Play.objects.prefetch_related("actors", "genres")
     serializer_class = PlaySerializer
+    permission_classes = (IsAdminOrReadOnly,)
     search_fields = ("title", "description")
     ordering_fields = ("title",)
 
@@ -79,6 +83,7 @@ class PlayViewSet(viewsets.ModelViewSet):
 class TheatreHallViewSet(viewsets.ModelViewSet):
     queryset = TheatreHall.objects.all()
     serializer_class = TheatreHallSerializer
+    permission_classes = (IsAdminOrReadOnly,)
     search_fields = ("name",)
     ordering_fields = ("name", "rows", "seats_in_row")
 
@@ -88,6 +93,7 @@ class PerformanceViewSet(viewsets.ModelViewSet):
         "tickets"
     )
     serializer_class = PerformanceSerializer
+    permission_classes = (IsAdminOrReadOnly,)
     search_fields = ("play__title", "theatre_hall__name")
     ordering_fields = ("show_time", "play__title")
 
