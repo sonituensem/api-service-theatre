@@ -237,3 +237,115 @@ class TheatreApiTests(APITestCase):
             detail_response.status_code, status.HTTP_404_NOT_FOUND
         )
         self.assertTrue(Reservation.objects.filter(pk=reservation.pk).exists())
+
+    def test_catalogue_reads_are_public(self) -> None:
+        for resource in (
+            "actors",
+            "genres",
+            "plays",
+            "theatre-halls",
+            "performances",
+        ):
+            with self.subTest(resource=resource):
+                response = self.client.get(f"/api/{resource}/")
+
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_regular_users_cannot_write_catalogue(self) -> None:
+        self.authenticate()
+        resources = (
+            ("actors", self.actor.pk, {"first_name": "New", "last_name": "Actor"}),
+            ("genres", self.genre.pk, {"name": "Comedy"}),
+            (
+                "plays",
+                self.play.pk,
+                {"title": "New Play", "description": "A new play."},
+            ),
+            (
+                "theatre-halls",
+                self.hall.pk,
+                {"name": "Small Hall", "rows": 2, "seats_in_row": 3},
+            ),
+            (
+                "performances",
+                self.performance.pk,
+                {
+                    "play": self.play.pk,
+                    "theatre_hall": self.hall.pk,
+                    "show_time": (timezone.now() + timedelta(days=2)).isoformat(),
+                },
+            ),
+        )
+
+        for resource, object_id, payload in resources:
+            with self.subTest(resource=resource, method="POST"):
+                response = self.client.post(f"/api/{resource}/", payload)
+                self.assertEqual(
+                    response.status_code, status.HTTP_403_FORBIDDEN
+                )
+
+            detail_url = f"/api/{resource}/{object_id}/"
+            with self.subTest(resource=resource, method="PATCH"):
+                response = self.client.patch(detail_url, payload)
+                self.assertEqual(
+                    response.status_code, status.HTTP_403_FORBIDDEN
+                )
+
+            with self.subTest(resource=resource, method="DELETE"):
+                response = self.client.delete(detail_url)
+                self.assertEqual(
+                    response.status_code, status.HTTP_403_FORBIDDEN
+                )
+
+    def test_staff_users_can_write_catalogue(self) -> None:
+        staff_user = get_user_model().objects.create_user(
+            username="catalogue_admin",
+            password="Strong-Password-737!",
+            is_staff=True,
+        )
+        self.client.force_authenticate(user=staff_user)
+        later_show_time = timezone.now() + timedelta(days=2)
+        resources = (
+            ("actors", {"first_name": "New", "last_name": "Actor"}, {"first_name": "Updated"}),
+            ("genres", {"name": "Comedy"}, {"name": "Updated Genre"}),
+            (
+                "plays",
+                {"title": "New Play", "description": "A new play."},
+                {"title": "Updated Play"},
+            ),
+            (
+                "theatre-halls",
+                {"name": "Small Hall", "rows": 2, "seats_in_row": 3},
+                {"name": "Updated Hall"},
+            ),
+            (
+                "performances",
+                {
+                    "play": self.play.pk,
+                    "theatre_hall": self.hall.pk,
+                    "show_time": later_show_time.isoformat(),
+                },
+                {"show_time": (later_show_time + timedelta(days=1)).isoformat()},
+            ),
+        )
+
+        for resource, create_payload, update_payload in resources:
+            with self.subTest(resource=resource):
+                response = self.client.post(
+                    f"/api/{resource}/", create_payload
+                )
+                self.assertEqual(
+                    response.status_code, status.HTTP_201_CREATED, response.data
+                )
+                detail_url = f"/api/{resource}/{response.data['id']}/"
+
+                update_response = self.client.patch(detail_url, update_payload)
+                self.assertEqual(
+                    update_response.status_code,
+                    status.HTTP_200_OK,
+                    update_response.data,
+                )
+                delete_response = self.client.delete(detail_url)
+                self.assertEqual(
+                    delete_response.status_code, status.HTTP_204_NO_CONTENT
+                )
