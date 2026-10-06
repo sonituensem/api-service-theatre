@@ -75,7 +75,7 @@ For deployment, set a strong `DJANGO_SECRET_KEY`, set `DJANGO_DEBUG=False`, and 
 
 ## Authentication and booking
 
-Catalogue `GET` requests are public. Catalogue create, update, and delete operations require an authenticated user. Reservations require a JWT. Create an account through the API:
+Catalogue `GET` requests are public. Creating, updating, and deleting plays, actors, genres, halls, and performances requires a staff account (`is_staff=True`). Public registration creates regular accounts, which cannot modify the catalogue. Create an administrator locally with `python manage.py createsuperuser` or `docker compose exec api python manage.py createsuperuser`. Reservations require a JWT. Create a regular account through the API:
 
 ```http
 POST /api/auth/register/
